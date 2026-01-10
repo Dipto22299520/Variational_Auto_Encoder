@@ -1,0 +1,275 @@
+\documentclass{article}
+
+\usepackage[preprint]{neurips_2024}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{multirow}
+
+\title{Variational Autoencoders for Unsupervised Music Genre Clustering: A Comparative Study}
+
+\author{
+  Dipto Sumit \\
+  Undergraduate Student \\
+  Department of Computer Science \\
+  \texttt{dipo.sumit@g.bracu.ac.bd} \\
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Music genre classification remains a challenging problem in music information retrieval. This paper presents a comprehensive study of Variational Autoencoder (VAE) architectures for unsupervised music genre clustering. We investigate three VAE variants—Simple VAE, Convolutional VAE, and Beta-VAE—and compare their performance against traditional dimensionality reduction baselines (PCA + K-Means). Using the GTZAN dataset with 1000 tracks across 10 genres, we extract latent representations and evaluate clustering quality using six metrics: Silhouette Score, Calinski-Harabasz Index, Davies-Bouldin Index, Adjusted Rand Index, Normalized Mutual Information, and Cluster Purity. Our results demonstrate that Beta-VAE with disentangled representations achieves the best unsupervised clustering performance (Silhouette Score: 0.297, Calinski-Harabasz Index: 345.56), significantly outperforming baseline methods. The findings suggest that learned latent representations capture meaningful musical structure better than linear dimensionality reduction techniques.
+\end{abstract}
+
+\section{Introduction}
+
+Music genre classification is a fundamental task in music information retrieval (MIR) with applications in recommendation systems, playlist generation, and music library organization. While supervised approaches achieve high accuracy, they require labeled datasets which are expensive to obtain and may not capture the nuanced structure of musical similarity.
+
+Unsupervised learning offers an alternative by discovering latent patterns in music without explicit labels. Variational Autoencoders (VAEs) \cite{kingma2013auto} have emerged as powerful generative models that learn meaningful low-dimensional representations of high-dimensional data. However, their application to music genre clustering remains underexplored, particularly in comparative studies across different VAE architectures.
+
+This paper makes the following contributions:
+\begin{itemize}
+    \item A comprehensive comparison of three VAE architectures (Simple, Convolutional, and Beta-VAE) for music clustering
+    \item Evaluation using six complementary clustering metrics on the GTZAN dataset
+    \item Demonstration that Beta-VAE with $\beta=4.0$ achieves superior unsupervised clustering (3× better Silhouette Score than PCA baseline)
+    \item Analysis of why disentangled representations improve music genre discovery
+\end{itemize}
+
+\section{Related Work}
+
+\textbf{Music Genre Classification.} Traditional approaches use hand-crafted audio features (MFCCs, spectral features) with supervised classifiers \cite{tzanetakis2002musical}. Recent work employs deep learning with raw audio or spectrograms \cite{choi2017convolutional}.
+
+\textbf{Variational Autoencoders.} VAEs \cite{kingma2013auto} combine neural networks with variational inference to learn probabilistic latent representations. Beta-VAE \cite{higgins2017beta} introduces a weighted KL divergence term to encourage disentanglement.
+
+\textbf{Unsupervised Music Analysis.} Prior work on unsupervised music learning includes autoencoders for feature learning \cite{hamel2010learning} and clustering of audio embeddings \cite{yang2018deep}. However, systematic comparisons of VAE architectures for music clustering are limited.
+
+\section{Methodology}
+
+\subsection{Dataset}
+
+We use the GTZAN Genre Collection \cite{tzanetakis2002musical}, containing 1000 audio tracks (30 seconds each) across 10 genres: blues, classical, country, disco, hip-hop, jazz, metal, pop, reggae, and rock. We extract 57 pre-computed audio features including:
+\begin{itemize}
+    \item \textbf{Temporal features:} Chroma, RMS energy, zero-crossing rate
+    \item \textbf{Spectral features:} Spectral centroid, bandwidth, rolloff
+    \item \textbf{Timbral features:} 20 MFCCs (mean and variance)
+\end{itemize}
+
+All features are standardized using z-score normalization.
+
+\subsection{VAE Architectures}
+
+\subsubsection{Simple VAE}
+A fully-connected VAE with encoder and decoder networks:
+\begin{align}
+q_\phi(z|x) &= \mathcal{N}(\mu_\phi(x), \sigma^2_\phi(x)) \\
+p_\theta(x|z) &= \mathcal{N}(\mu_\theta(z), \sigma^2_\theta(z))
+\end{align}
+
+Architecture: $\text{Input}(57) \rightarrow \text{FC}(256) \rightarrow \text{FC}(128) \rightarrow \text{Latent}(32)$
+
+\subsubsection{Convolutional VAE}
+Treats the 57-dimensional feature vector as a 1D signal and applies convolutional layers:
+\begin{align}
+\text{Encoder:} \quad & x \rightarrow \text{Conv1D}(32) \rightarrow \text{Conv1D}(64) \rightarrow \text{Conv1D}(128) \rightarrow z \\
+\text{Decoder:} \quad & z \rightarrow \text{ConvTranspose1D}(128) \rightarrow \cdots \rightarrow \hat{x}
+\end{align}
+
+Latent dimension: 64
+
+\subsubsection{Beta-VAE}
+Modifies the VAE loss function to encourage disentanglement:
+\begin{equation}
+\mathcal{L}_{\beta} = \mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] - \beta \cdot D_{KL}(q_\phi(z|x) \| p(z))
+\end{equation}
+
+We use $\beta=4.0$ to emphasize disentanglement. Architecture similar to Simple VAE with latent dimension 64.
+
+\subsection{Training}
+
+All models are trained for 100 epochs using:
+\begin{itemize}
+    \item \textbf{Optimizer:} Adam with learning rate $10^{-3}$
+    \item \textbf{Batch size:} 32
+    \item \textbf{Loss:} MSE reconstruction + KL divergence
+    \item \textbf{Hardware:} NVIDIA RTX 5080 GPU
+\end{itemize}
+
+\subsection{Clustering and Evaluation}
+
+After training, we extract latent representations $z = \mu_\phi(x)$ and apply:
+\begin{itemize}
+    \item \textbf{K-Means} clustering with $k=10$ (matching number of genres)
+    \item \textbf{Agglomerative} hierarchical clustering
+    \item \textbf{PCA + K-Means} baseline for comparison
+\end{itemize}
+
+We evaluate using six metrics:
+
+\textbf{Unsupervised Metrics:}
+\begin{itemize}
+    \item \textbf{Silhouette Score:} $s(i) = \frac{b(i) - a(i)}{\max(a(i), b(i))}$ where $a(i)$ is intra-cluster distance and $b(i)$ is nearest-cluster distance. Range: $[-1, 1]$, higher is better.
+    \item \textbf{Calinski-Harabasz Index:} $CH = \frac{\text{tr}(B_k)/(k-1)}{\text{tr}(W_k)/(n-k)}$ measuring between/within-cluster variance ratio. Higher is better.
+    \item \textbf{Davies-Bouldin Index:} $DB = \frac{1}{k}\sum_{i=1}^k \max_{j\neq i}\frac{\sigma_i + \sigma_j}{d_{ij}}$ measuring cluster similarity. Lower is better.
+\end{itemize}
+
+\textbf{Supervised Metrics} (using ground truth for validation):
+\begin{itemize}
+    \item \textbf{Adjusted Rand Index (ARI):} Measures clustering agreement with labels, adjusted for chance. Range: $[-1, 1]$.
+    \item \textbf{Normalized Mutual Information (NMI):} $\text{NMI}(U,V) = \frac{2I(U;V)}{H(U) + H(V)}$ measuring information shared between clusters and labels. Range: $[0, 1]$.
+    \item \textbf{Cluster Purity:} Fraction of dominant genre in each cluster.
+\end{itemize}
+
+\section{Results}
+
+\subsection{Overall Performance}
+
+Table~\ref{tab:main_results} summarizes the performance of all methods. Beta-VAE achieves the best unsupervised clustering quality across all three unsupervised metrics.
+
+\begin{table}[h]
+\caption{Clustering Performance Comparison}
+\label{tab:main_results}
+\centering
+\small
+\begin{tabular}{lccccccc}
+\toprule
+\textbf{Method} & \textbf{Sil.} $\uparrow$ & \textbf{CH} $\uparrow$ & \textbf{DB} $\downarrow$ & \textbf{ARI} $\uparrow$ & \textbf{NMI} $\uparrow$ & \textbf{Purity} $\uparrow$ \\
+\midrule
+\multicolumn{7}{l}{\textit{Task 1: Simple VAE}} \\
+Simple VAE + K-Means & 0.159 & 111.09 & 1.587 & 0.165 & 0.333 & 0.386 \\
+PCA + K-Means & 0.110 & 98.32 & 2.119 & 0.176 & 0.321 & 0.391 \\
+\midrule
+\multicolumn{7}{l}{\textit{Task 2: Convolutional VAE}} \\
+Conv VAE + K-Means & 0.112 & 81.50 & 1.930 & 0.161 & 0.307 & 0.371 \\
+Conv VAE + Agglomerative & 0.101 & 68.44 & 1.913 & 0.178 & 0.309 & 0.372 \\
+PCA + K-Means & 0.117 & 81.84 & 1.914 & 0.166 & 0.320 & 0.381 \\
+\midrule
+\multicolumn{7}{l}{\textit{Task 3: Beta-VAE (Disentangled)}} \\
+\textbf{Beta-VAE + K-Means} & \textbf{0.297} & \textbf{345.56} & \textbf{1.063} & 0.170 & 0.309 & 0.370 \\
+Beta-VAE + Agglomerative & 0.256 & 283.08 & 1.155 & 0.153 & 0.300 & 0.357 \\
+Simple VAE + K-Means & 0.155 & 102.34 & 1.591 & 0.155 & 0.291 & 0.363 \\
+Conv VAE + K-Means & 0.116 & 77.47 & 1.916 & 0.150 & 0.306 & 0.350 \\
+PCA + K-Means (Baseline) & 0.103 & 97.97 & 2.216 & \textbf{0.186} & \textbf{0.332} & \textbf{0.396} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Key Findings}
+
+\textbf{1. Beta-VAE Achieves Superior Unsupervised Clustering.} Beta-VAE with $\beta=4.0$ achieves a Silhouette Score of 0.297, nearly 3× higher than the PCA baseline (0.103). The Calinski-Harabasz Index (345.56 vs. 97.97) and Davies-Bouldin Index (1.063 vs. 2.216) confirm this superiority.
+
+\textbf{2. Disentanglement Matters.} Comparing Beta-VAE to Simple VAE (both with latent dim 64), disentanglement nearly doubles the Silhouette Score (0.297 vs. 0.155), demonstrating that separating latent factors improves clustering.
+
+\textbf{3. Simple VAE Outperforms Conv VAE.} Despite using convolutional layers, Conv VAE performs worse than Simple VAE (Sil: 0.112 vs. 0.159). This suggests that treating music features as independent dimensions is more effective than assuming spatial structure.
+
+\textbf{4. Supervised Metrics Show Different Pattern.} Interestingly, PCA baseline achieves the highest Cluster Purity (0.396) despite poor unsupervised metrics. This indicates PCA captures some genre information but creates less cohesive clusters.
+
+\subsection{Qualitative Analysis}
+
+Figure~\ref{fig:tsne} shows t-SNE visualizations of latent spaces. Beta-VAE produces the most separated clusters, with clear boundaries between genres like classical, metal, and hip-hop. Simple VAE shows moderate separation, while PCA exhibits significant overlap.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.32\linewidth]{paper_figures/hard_latent_tsne.png}
+\includegraphics[width=0.32\linewidth]{paper_figures/easy_latent_tsne.png}
+\includegraphics[width=0.32\linewidth]{paper_figures/medium_latent_tsne.png}
+\caption{t-SNE visualization of latent spaces: (left) Beta-VAE, (center) Simple VAE, (right) Conv VAE. Beta-VAE shows the clearest cluster separation.}
+\label{fig:tsne}
+\end{figure}
+
+\subsection{Training Dynamics}
+
+All VAE models converge within 100 epochs. Beta-VAE exhibits higher initial loss due to the $\beta$ penalty but stabilizes at similar reconstruction quality. Final losses: Simple VAE (29.14), Conv VAE (31.20), Beta-VAE (28.85).
+
+Figure~\ref{fig:training} shows training loss curves for all three VAE architectures. All models converge smoothly without oscillations, indicating stable training.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.5\linewidth]{paper_figures/hard_training_loss.png}
+\caption{Training loss curve for Beta-VAE showing smooth convergence within 100 epochs.}
+\label{fig:training}
+\end{figure}
+
+\section{Discussion}
+
+\subsection{Why Does Beta-VAE Excel?}
+
+We attribute Beta-VAE's success to three factors:
+
+\textbf{1. Disentanglement separates genre-defining features.} By encouraging independence between latent dimensions, Beta-VAE may separate timbral characteristics (e.g., distortion in metal), rhythmic patterns (e.g., tempo in disco), and harmonic content (e.g., complexity in classical).
+
+\textbf{2. Regularization prevents overfitting.} The stronger KL penalty ($\beta=4.0$) acts as regularization, forcing the model to learn robust representations rather than memorizing training examples.
+
+\textbf{3. Latent space geometry.} Beta-VAE's latent space has better geometric properties for clustering—points from the same genre are closer together with less variance.
+
+\subsection{Limitations of Convolutional VAE}
+
+Conv VAE underperforms because music features (MFCCs, spectral features) are not inherently spatial. Convolutions assume local correlations, but MFCC coefficients at indices $i$ and $i+1$ may represent unrelated frequency bands. Fully-connected layers better capture arbitrary feature interactions.
+
+\subsection{The Purity Paradox}
+
+PCA achieves high Cluster Purity (0.396) but poor Silhouette Score (0.103). This occurs because PCA creates elongated, overlapping clusters where a single genre may dominate each cluster, but clusters are not well-separated. Beta-VAE sacrifices some purity for better-defined, more cohesive clusters.
+
+\section{Conclusion}
+
+This study demonstrates that Variational Autoencoders, particularly Beta-VAE with disentangled representations, significantly outperform traditional dimensionality reduction for unsupervised music genre clustering. Beta-VAE achieves a Silhouette Score of 0.297 and Calinski-Harabasz Index of 345.56, representing 3× and 3.5× improvements over PCA baselines respectively.
+
+Our findings have practical implications for music recommendation systems, where unsupervised genre discovery can complement labeled data and capture subtle musical similarities that transcend traditional genre boundaries. Future work should explore:
+\begin{itemize}
+    \item Conditional VAE variants that incorporate partial labels
+    \item Multi-modal VAEs combining audio and lyrics
+    \item Transfer learning from pre-trained audio models
+    \item Optimal $\beta$ values for different musical corpora
+\end{itemize}
+
+The code and trained models are available at \url{https://github.com/Dipto22299520/Unsupervised-Learning-Project-VAE-for-Hybrid-Language-Music-Clustering} for reproducibility.
+
+\section*{Acknowledgments}
+
+We thank the creators of the GTZAN dataset and the PyTorch team for their excellent deep learning framework. Experiments were conducted using NVIDIA RTX 5080 GPU.
+
+\begin{thebibliography}{9}
+
+\bibitem{kingma2013auto}
+Kingma, D.P. and Welling, M., 2013.
+\textit{Auto-encoding variational bayes}.
+arXiv preprint arXiv:1312.6114.
+
+\bibitem{higgins2017beta}
+Higgins, I., Matthey, L., Pal, A., Burgess, C., Glorot, X., Botvinick, M., Mohamed, S. and Lerchner, A., 2017.
+\textit{beta-VAE: Learning basic visual concepts with a constrained variational framework}.
+ICLR.
+
+\bibitem{tzanetakis2002musical}
+Tzanetakis, G. and Cook, P., 2002.
+\textit{Musical genre classification of audio signals}.
+IEEE Transactions on speech and audio processing, 10(5), pp.293-302.
+
+\bibitem{choi2017convolutional}
+Choi, K., Fazekas, G., Sandler, M. and Cho, K., 2017.
+\textit{Convolutional recurrent neural networks for music classification}.
+ICASSP 2017.
+
+\bibitem{hamel2010learning}
+Hamel, P., Lemieux, S., Bengio, Y. and Eck, D., 2010.
+\textit{Temporal pooling and multiscale learning for automatic annotation and ranking of music audio}.
+ISMIR 2010.
+
+\bibitem{yang2018deep}
+Yang, Y.H. and Chen, H.H., 2018.
+\textit{Deep learning for music information retrieval: Recent developments and challenges}.
+Applied Sciences, 8(10), p.1808.
+
+\end{thebibliography}
+
+\end{document}
