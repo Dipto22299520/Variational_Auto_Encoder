@@ -318,6 +318,32 @@ class ClusteringEvaluator:
             return min(scores)
 
 
+def compute_all_metrics(X, labels_pred, labels_true=None):
+    """
+    Compute all clustering metrics and return as dictionary
+    
+    Args:
+        X: Feature matrix
+        labels_pred: Predicted cluster labels
+        labels_true: True labels (optional)
+        
+    Returns:
+        Dictionary of metric scores
+    """
+    results = {
+        'silhouette_score': compute_silhouette_score(X, labels_pred),
+        'calinski_harabasz_score': compute_calinski_harabasz_index(X, labels_pred),
+        'davies_bouldin_score': compute_davies_bouldin_index(X, labels_pred),
+    }
+    
+    if labels_true is not None:
+        results['adjusted_rand_score'] = compute_adjusted_rand_index(labels_true, labels_pred)
+        results['nmi_score'] = compute_normalized_mutual_info(labels_true, labels_pred)
+        results['purity'] = compute_cluster_purity(labels_true, labels_pred)
+    
+    return results
+
+
 def evaluate_clustering(X, labels_pred, labels_true=None, method_name="Clustering"):
     """
     Convenience function to evaluate clustering results
