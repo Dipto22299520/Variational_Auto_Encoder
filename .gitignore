@@ -58,6 +58,9 @@ results/*.jpg
 results/*.pdf
 results/clustering_metrics/*.csv
 
+# But include paper figures
+!paper_figures/*.png
+
 # LaTeX auxiliary files
 *.aux
 *.bbl
