@@ -73,10 +73,10 @@ Results are saved in the `results/` directory:
 - Reconstructions: Sample reconstructions from VAE
 
 ## Author
-Moin Mostakim
+Dipto Sumit
 
 ## Course
-Neural Networks
+Neural Network CSE425
 
 ## Submission Date
 January 10th, 2026
