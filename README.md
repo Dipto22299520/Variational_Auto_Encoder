@@ -78,5 +78,8 @@ Dipto Sumit
 ## Course
 Neural Network CSE425
 
+## Data set link
+https://www.kaggle.com/datasets/andradaolteanu/gtzan-dataset-music-genre-classification)
+
 ## Submission Date
 January 10th, 2026
